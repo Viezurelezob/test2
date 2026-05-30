@@ -1,0 +1,1 @@
+export const canUnlock=(inventory,requirement)=>Object.values(inventory.quest).some((count)=>count>0)&&Boolean(requirement);export const openTreasure=(zone,inventory)=>zone&&!zone.opened&&(zone.opened=true,inventory.add({name:zone.item,category:'quest'}),true);

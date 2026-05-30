@@ -1,0 +1,1 @@
+export class BossFSM{constructor(config){this.config=config;this.hp=config.hp;this.phase=1;this.state='idle'}update(){const ratio=this.hp/this.config.hp;this.phase=ratio>.66?1:ratio>.33?2:3}hurt(amount){this.hp=Math.max(0,this.hp-amount);this.state=this.hp?'hurt':'dead'}}

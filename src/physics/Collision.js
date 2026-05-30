@@ -1,0 +1,2 @@
+import{overlaps}from'./AABB.js';
+export function moveAndCollide(body,tiles,dt){body.grounded=false;body.wall=0;body.x+=body.vx*dt;for(const t of tiles){if(!overlaps(body,t))continue;if(body.vx>0){body.x=t.x-body.w;body.wall=1}else if(body.vx<0){body.x=t.x+t.w;body.wall=-1}body.vx=0}body.y+=body.vy*dt;for(const t of tiles){if(!overlaps(body,t))continue;if(body.vy>0){body.y=t.y-body.h;body.grounded=true}else if(body.vy<0)body.y=t.y+t.h;body.vy=0}}

@@ -1,0 +1,1 @@
+export class Renderer{constructor(ctx,camera){this.ctx=ctx;this.camera=camera} world(fn){this.ctx.save();this.ctx.translate(-this.camera.x,-this.camera.y);fn(this.ctx);this.ctx.restore()} rect(item,color){this.ctx.fillStyle=color;this.ctx.fillRect(item.x,item.y,item.w,item.h)} }

@@ -1,0 +1,1 @@
+export class SFXManager{constructor(volume){this.volume=volume}play(url){if(!url)return;try{const sound=new Audio(url);sound.volume=this.volume.sfx;sound.play().catch(()=>{})}catch{/* Missing audio degrades silently. */}}}

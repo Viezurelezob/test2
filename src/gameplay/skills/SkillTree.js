@@ -1,0 +1,1 @@
+import{SKILLS}from'../../data/skills.js';export class SkillTree{constructor(){this.unlocked=[];this.points=0}unlock(id){const s=SKILLS.find(v=>v.id===id);if(!s||this.unlocked.includes(id)||this.points<s.cost||(s.requires&&!this.unlocked.includes(s.requires)))return false;this.points-=s.cost;this.unlocked.push(id);return true}}

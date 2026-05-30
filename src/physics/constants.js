@@ -1,0 +1,1 @@
+export const PHYSICS={gravity:1900,terminalVelocity:920,walkSpeed:210,sprintSpeed:350,acceleration:1700,friction:2100,jumpVelocity:620,wallJumpX:400};export const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
