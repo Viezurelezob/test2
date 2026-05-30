@@ -1,0 +1,1 @@
+export class Inventory{constructor(){this.equipment={charm:null,cloak:null};this.consumables={};this.quest={}}add(item,amount=1){const bag=item.category==='consumable'?this.consumables:this.quest;bag[item.name]=(bag[item.name]||0)+amount}serialize(){return{equipment:this.equipment,consumables:this.consumables,quest:this.quest}}}

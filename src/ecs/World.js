@@ -1,0 +1,1 @@
+export class World{constructor(){this.entities=new Set();this.systems=[]} add(entity){this.entities.add(entity);return entity} remove(entity){this.entities.delete(entity)} addSystem(system){this.systems.push(system)} update(dt){this.systems.forEach(system=>system.update?.(this,dt))} query(...names){return[...this.entities].filter(e=>names.every(n=>e.has(n)))} }

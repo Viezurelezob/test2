@@ -1,0 +1,2 @@
+export function updateCheckpoints(player,checkpoints,bus){for(const c of checkpoints)if(!c.active&&Math.abs(player.x-c.x)<48){c.active=true;checkpoints.forEach(v=>{if(v!==c)v.active=false});bus.emit('checkpoint',{checkpoint:c})}}
+export function drawCheckpoint(ctx,c){ctx.fillStyle=c.active?'#a7ffbe':'#6b8d75';ctx.fillRect(c.x,c.y-64,7,64);ctx.beginPath();ctx.moveTo(c.x+7,c.y-62);ctx.lineTo(c.x+42,c.y-48);ctx.lineTo(c.x+7,c.y-35);ctx.fill()}

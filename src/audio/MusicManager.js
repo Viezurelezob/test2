@@ -1,0 +1,1 @@
+export class MusicManager{constructor(volume){this.volume=volume;this.audio=null}play(url){if(!url)return;try{this.audio?.pause();this.audio=new Audio(url);this.audio.loop=true;this.audio.volume=this.volume.music;this.audio.play().catch(()=>{})}catch{/* Missing audio degrades silently. */}}sync(){if(this.audio)this.audio.volume=this.volume.music}}

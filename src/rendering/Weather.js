@@ -1,0 +1,1 @@
+export function drawWeather(ctx,type,t,w,h){ctx.save();ctx.globalAlpha=.28;ctx.strokeStyle=type==='snow'?'#e9ffff':'#b7e6db';for(let i=0;i<36;i++){const x=(i*97+t*28)%w,y=(i*53+t*75)%h;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(type==='rain'?-5:4),y+(type==='rain'?16:4));ctx.stroke()}ctx.restore()}

@@ -1,0 +1,1 @@
+export function applyPowerUp(player,item){if(!item.effect||typeof item.effect==='string')return;player.powerups.push({...item.effect,remaining:item.effect.duration})}export function activeMultiplier(player,type){return player.powerups.filter(p=>p.type===type).reduce((value,p)=>value*p.multiplier,1)}

@@ -1,0 +1,1 @@
+export const ENEMIES={mossling:{name:'Mossling',hp:45,speed:88,damage:12,detectionRadius:340,attackRange:62,aggroTimeout:2.8,color:'#b8e36c'},'vine-stalker':{name:'Vine Stalker',hp:75,speed:110,damage:18,detectionRadius:390,attackRange:74,aggroTimeout:3.4,color:'#8cbf5c'}};

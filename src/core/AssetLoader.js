@@ -1,0 +1,1 @@
+export class AssetLoader { constructor(){this.cache=new Map()} async loadBiome(manifest){const assets=manifest?.assets||[];await Promise.all(assets.map(async asset=>{try{const response=await fetch(asset.url);if(response.ok)this.cache.set(asset.id,await response.blob())}catch{/* Asset absence is intentionally silent. */}}));return this.cache} get(id){return this.cache.get(id)} }
