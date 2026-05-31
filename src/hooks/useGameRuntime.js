@@ -11,8 +11,9 @@ import { Inventory } from '../gameplay/inventory/Inventory.js';
 import { SkillTree } from '../gameplay/skills/SkillTree.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { Storage } from '../save/Storage.js';
+import { ITEMS } from '../data/items.js';
 
-const EMPTY_INVENTORY = { gold: 0, crystals: 0, keys: 0 };
+const EMPTY_INVENTORY = { resources: {}, quest: {}, relics: {}, consumables: {}, ownedEquipment: {}, equipment: { charm: null, cloak: null }, gold: 0, crystals: 0, keys: 0 };
 
 export function createGameRuntime(canvas, notify = {}) {
   const bus = new EventBus();
@@ -29,7 +30,8 @@ export function createGameRuntime(canvas, notify = {}) {
   let scene;
 
   const settings = () => ({ music: volume.music, sfx: volume.sfx, debug: Boolean(scene?.debug) });
-  const getInventorySnapshot = () => scene?.player ? { gold: scene.player.gold, crystals: scene.player.crystals, keys: scene.player.keys } : { ...EMPTY_INVENTORY };
+  const getInventorySnapshot = () => scene?.player ? { ...inventory.serialize(), gold: scene.player.gold, crystals: scene.player.crystals, keys: scene.player.keys } : structuredClone(EMPTY_INVENTORY);
+  const publishInventory = () => notify.inventory?.(getInventorySnapshot());
   const getSkillsSnapshot = () => skills.serialize();
   const launch = save => {
     if (save?.settings) {
@@ -43,7 +45,7 @@ export function createGameRuntime(canvas, notify = {}) {
     scenes.change(scene);
     saveManager.bind(() => ({ player: scene.player, levelId: scene.levelId, checkpoint: scene.checkpoints.find(checkpoint => checkpoint.active) || scene.level.spawn, inventory, skills, zoneState: scene.serializeZoneState(), settings: settings() }));
     notify.settings?.(settings());
-    notify.inventory?.(getInventorySnapshot());
+    publishInventory();
     notify.skills?.(getSkillsSnapshot());
   };
   const subscriptions = [
@@ -51,8 +53,8 @@ export function createGameRuntime(canvas, notify = {}) {
     bus.on('player:dead', () => scene?.respawn()),
     bus.on('checkpoint', ({ checkpoint }) => notify.toast?.(`Checkpoint activat: ${checkpoint.id}`)),
     bus.on('level:complete', ({ nextLevelId }) => notify.toast?.(nextLevelId ? 'Nivel complet! Se încarcă următoarea zonă.' : 'Aventura este completă!')),
-    bus.on('pickup', ({ item }) => { notify.inventory?.(getInventorySnapshot()); notify.toast?.(`${item.name} colectat`); }),
-    bus.on('ui:treasure', ({ treasure }) => notify.toast?.(`Comoară deschisă: ${treasure.item}`)),
+    bus.on('pickup', ({ item }) => { publishInventory(); notify.toast?.(`${item.name} colectat`); }),
+    bus.on('ui:treasure', ({ treasure }) => { publishInventory(); notify.toast?.(`Comoară deschisă: ${treasure.item}`); }),
     bus.on('ui:secret', () => notify.toast?.('Secret descoperit!')),
     bus.on('ui:gate', () => notify.toast?.('Poartă deblocată!')),
     bus.on('save', ({ kind }) => { notify.continueAvailability?.(storage.has()); notify.toast?.(`${kind} complet`); }),
@@ -71,6 +73,8 @@ export function createGameRuntime(canvas, notify = {}) {
     getInventorySnapshot,
     getSkillsSnapshot,
     unlockSkill(id) { if (!skills.unlock(id)) return false; scene?.player.applySkillEffects(); notify.skills?.(getSkillsSnapshot()); return true; },
+    toggleEquipment(id) { const item = ITEMS[id]; if (!item || item.category !== 'equipment') return false; const changed = inventory.equipment[item.slot] === id ? inventory.unequip(item.slot) : inventory.equip(id, item.slot); if (changed) { scene?.player.applySkillEffects(); publishInventory(); } return changed; },
+    useConsumable(id) { const item = inventory.useConsumable(id); if (!item) return false; scene?.player.useConsumable(item); publishInventory(); return true; },
     destroy() { subscriptions.forEach(unsubscribe => unsubscribe()); saveManager.destroy(); music.destroy(); game.stop(); input.destroy(); scenes.destroy(); },
   };
   game.setPaused(true);
@@ -140,5 +144,7 @@ export function useGameRuntime(canvasRef) {
   }, [activePanel, call, paused]);
 
   const unlockSkill = useCallback(id => call('unlockSkill', id), [call]);
-  return { activePanel, paused, canContinue, music, sfx, debug, inventory, skills, toast, actions: { handleAction, unlockSkill, setMusicVolume, setSfxVolume, setDebugEnabled } };
+  const toggleEquipment = useCallback(id => call('toggleEquipment', id), [call]);
+  const useConsumable = useCallback(id => call('useConsumable', id), [call]);
+  return { activePanel, paused, canContinue, music, sfx, debug, inventory, skills, toast, actions: { handleAction, unlockSkill, toggleEquipment, useConsumable, setMusicVolume, setSfxVolume, setDebugEnabled } };
 }

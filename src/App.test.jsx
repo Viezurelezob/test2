@@ -11,6 +11,7 @@ function UIHarness({ saved = false, initialPanel = 'menu' }) {
   const [sfx, setSfx] = useState(.7);
   const [debug, setDebug] = useState(false);
   const [skills, setSkills] = useState({ unlocked: ['fleet-foot'], points: 2 });
+  const [inventory, setInventory] = useState({ gold: 12, crystals: 3, keys: 1, quest: { 'canopy-emblem': 1 }, relics: {}, consumables: { 'ember-tonic': 2 }, ownedEquipment: { 'mossheart-charm': 1 }, equipment: { charm: null, cloak: null } });
   const actions = {
     handleAction(action) {
       if (action === 'settings' || action === 'credits' || action === 'inventory' || action === 'skills') setActivePanel(action);
@@ -23,8 +24,10 @@ function UIHarness({ saved = false, initialPanel = 'menu' }) {
     setSfxVolume: setSfx,
     setDebugEnabled: setDebug,
     unlockSkill(id) { setSkills(current => ({ points: current.points - 2, unlocked: [...current.unlocked, id] })); },
+    toggleEquipment(id) { setInventory(current => ({ ...current, equipment: { ...current.equipment, charm: current.equipment.charm === id ? null : id } })); },
+    useConsumable(id) { setInventory(current => ({ ...current, consumables: { ...current.consumables, [id]: current.consumables[id] - 1 } })); },
   };
-  return <GameUI canvasRef={null} runtime={{ activePanel, canContinue: saved, debug, inventory: { gold: 12, crystals: 3, keys: 1 }, skills, music, sfx, toast: '', actions }} />;
+  return <GameUI canvasRef={null} runtime={{ activePanel, canContinue: saved, debug, inventory, skills, music, sfx, toast: '', actions }} />;
 }
 
 function ToastHarness() {
@@ -66,11 +69,24 @@ describe('React game UI', () => {
 
   it('renders inventory snapshots without injecting HTML', () => {
     render(<UIHarness initialPanel="inventory" />);
-    expect(screen.getByText('Coins').nextSibling).toHaveTextContent('12');
-    expect(screen.getByText('Aether crystals').nextSibling).toHaveTextContent('3');
-    expect(screen.getByText('Rootforged keys').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('Sunshard Coin').nextSibling).toHaveTextContent('12');
+    expect(screen.getByText('Aether Crystal').nextSibling).toHaveTextContent('3');
+    expect(screen.getByText('Rootforged Key').nextSibling).toHaveTextContent('1');
   });
 
+
+  it('shows inventory sections and wires consumable and equipment actions', () => {
+    render(<UIHarness initialPanel="inventory" />);
+    expect(screen.getByRole('heading', { name: 'Resources' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Quest items' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Consumables' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Equipment' })).toBeInTheDocument();
+    expect(screen.getByText('Ember Tonic').nextSibling).toHaveTextContent('2');
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    expect(screen.getByText('Ember Tonic').nextSibling).toHaveTextContent('1');
+    fireEvent.click(screen.getByRole('button', { name: 'Equip' }));
+    expect(screen.getByRole('button', { name: 'Unequip' })).toBeInTheDocument();
+  });
 
   it('opens the skill tree from pause and displays costs, requirements, points, and unlock state', () => {
     render(<UIHarness initialPanel="pause" />);

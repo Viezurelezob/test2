@@ -3,6 +3,7 @@ import { LEVEL_ORDER, LEVELS } from '../data/levels.js';
 import { BOSSES, ENEMIES } from '../data/enemies.js';
 import { ITEMS } from '../data/items.js';
 import { SkillTree } from '../gameplay/skills/SkillTree.js';
+import { Inventory } from '../gameplay/inventory/Inventory.js';
 import { applyPowerUp } from '../gameplay/player/PowerUps.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { EventBus } from './EventBus.js';
@@ -171,6 +172,23 @@ describe('skill progression', () => {
     expect(scene.player.powerups[0].remaining).toBe(10);
   });
 
+  it('applies equipped item stats and active consumable damage boosts', () => {
+    const inventory = new Inventory();
+    inventory.add('ember-charm');
+    inventory.add('windglass-cloak');
+    inventory.equipCharm('ember-charm');
+    inventory.equipCloak('windglass-cloak');
+    const player = new PlayScene({ canvas, input, bus: new EventBus(), music, assets, inventory, skills: new SkillTree() }).player;
+    player.useConsumable(ITEMS['ember-tonic']);
+    const enemy = { x: player.x + player.w, y: player.y + 8, w: 30, h: 42, state: 'idle', hurt: vi.fn() };
+
+    player.melee([enemy]);
+
+    expect(player).toMatchObject({ meleeDamage: 27, powerupDuration: 1.25 });
+    expect(player.powerups[0].remaining).toBe(10);
+    expect(enemy.hurt).toHaveBeenCalledWith(40.5, 1);
+  });
+
   it('allows a second airborne jump only after Air Dancer is unlocked', () => {
     const particles = { spawn: vi.fn() };
     const pressJump = { isDown: () => false, wasPressed: action => action === 'jump' };
@@ -223,7 +241,7 @@ describe('interactive level zones', () => {
     scene.updateZones();
 
     expect(opened).toHaveBeenCalledOnce();
-    expect(scene.inventory.quest['verdant-sigil']).toBe(1);
+    expect(scene.inventory.relics['verdant-sigil']).toBe(1);
     expect(scene.serializeZoneState().openedTreasures).toContain('ruin-relic');
   });
 
