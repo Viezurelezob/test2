@@ -16,7 +16,7 @@ export function GameUI({ runtime, canvasRef }) {
     {activePanel === 'menu' && <MainMenu canContinue={canContinue} onAction={actions.handleAction} />}
     {activePanel === 'pause' && <PauseMenu onAction={actions.handleAction} />}
     {activePanel === 'settings' && <SettingsPanel music={music} sfx={sfx} debug={debug} onAction={actions.handleAction} onMusicChange={actions.setMusicVolume} onSfxChange={actions.setSfxVolume} onDebugChange={actions.setDebugEnabled} />}
-    {activePanel === 'inventory' && <InventoryPanel inventory={inventory} onAction={actions.handleAction} />}
+    {activePanel === 'inventory' && <InventoryPanel inventory={inventory} onAction={actions.handleAction} onEquip={actions.toggleEquipment} onConsume={actions.useConsumable} />}
     {activePanel === 'skills' && <SkillTreePanel skills={skills} onAction={actions.handleAction} onUnlock={actions.unlockSkill} />}
     {activePanel === 'credits' && <CreditsPanel onAction={actions.handleAction} />}
     <Toast message={toast} />

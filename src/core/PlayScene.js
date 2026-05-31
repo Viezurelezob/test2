@@ -26,7 +26,7 @@ export class PlayScene {
     this.renderer = new Renderer(canvas.getContext('2d'), this.camera);
     this.particles = new ParticlePool();
     this.projectiles = new ProjectilePool();
-    this.pickups = new PickupPool(bus, this.particles);
+    this.pickups = new PickupPool(bus, this.particles, inventory);
     this.zoneState = {
       openedTreasures: zoneSet(saveData?.openedTreasures),
       discoveredSecrets: zoneSet(saveData?.discoveredSecrets),
@@ -49,7 +49,7 @@ export class PlayScene {
     this.secrets.forEach(zone => { zone.discovered = this.zoneState.discoveredSecrets.has(zone.id); });
     this.conditionalZones.forEach(zone => { zone.unlocked = this.zoneState.unlockedGates.has(zone.id); });
     const spawn = save?.checkpoint || this.level.spawn;
-    this.player = new Player(spawn.x, spawn.y, this.bus, this.projectiles, this.particles, this.skills);
+    this.player = new Player(spawn.x, spawn.y, this.bus, this.projectiles, this.particles, this.skills, this.inventory);
     if (save) Object.assign(this.player, save.stats, save.collectibles);
     this.player.applySkillEffects();
     this.enemies = this.level.enemies.map(enemy => new EnemyFSM(enemy.x, enemy.y, ENEMIES[enemy.type], this.bus, this.particles));
