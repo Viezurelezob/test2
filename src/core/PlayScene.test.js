@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { LEVEL_ORDER, LEVELS } from '../data/levels.js';
+import { ENEMIES } from '../data/enemies.js';
+import { ITEMS } from '../data/items.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { EventBus } from './EventBus.js';
 import { PlayScene } from './PlayScene.js';
@@ -25,6 +27,52 @@ describe('level progression', () => {
         h: 180,
         nextLevelId: LEVEL_ORDER[index + 1] ?? null,
       });
+    });
+  });
+
+  it('configures every normal level with traversal, interactive zones, and biome enemies', () => {
+    const normalLevels = LEVEL_ORDER.filter(id => !id.endsWith('-boss'));
+    normalLevels.forEach(id => {
+      const level = LEVELS[id];
+      const enemyTypes = new Set(level.enemies.map(enemy => enemy.type));
+      expect(level.platforms.length, `${id} platforms`).toBeGreaterThanOrEqual(8);
+      expect(new Set(level.platforms.map(([, y]) => y)).size, `${id} vertical routes`).toBeGreaterThanOrEqual(4);
+      expect(level.checkpoints.length, `${id} checkpoints`).toBeGreaterThan(0);
+      expect(level.hazards.length, `${id} hazards`).toBeGreaterThan(0);
+      expect(level.pickups.length, `${id} pickups`).toBeGreaterThan(0);
+      expect(level.secrets.length, `${id} secrets`).toBeGreaterThan(0);
+      expect(level.treasures.length, `${id} treasures`).toBeGreaterThan(0);
+      expect(enemyTypes.size, `${id} enemy variety`).toBeGreaterThanOrEqual(2);
+      level.enemies.forEach(enemy => expect(ENEMIES[enemy.type], `${id} enemy ${enemy.type}`).toBeDefined());
+      level.pickups.forEach(pickup => expect(ITEMS[pickup.type], `${id} pickup ${pickup.type}`).toBeDefined());
+      level.treasures.forEach(treasure => expect(ITEMS[treasure.item], `${id} treasure ${treasure.item}`).toBeDefined());
+      level.conditionalZones.forEach(gate => expect(level.treasures.some(treasure => treasure.item === gate.requires), `${id} gate ${gate.id}`).toBe(true));
+    });
+  });
+
+  it('keeps each normal level spawn, checkpoints, and generated exit on traversable ground', () => {
+    const standsOnPlatform = (level, point) => level.platforms.some(([x, y, w]) => point.x >= x && point.x <= x + w && [point.y, point.y + 58, point.y + (point.h || 0)].some(bottom => bottom <= y && y - bottom <= 130));
+    LEVEL_ORDER.filter(id => !id.endsWith('-boss')).forEach(id => {
+      const level = LEVELS[id];
+      expect(standsOnPlatform(level, level.spawn), `${id} spawn`).toBe(true);
+      level.checkpoints.forEach(checkpoint => expect(standsOnPlatform(level, checkpoint), `${id} checkpoint ${checkpoint.id}`).toBe(true));
+      expect(standsOnPlatform(level, level.exit), `${id} exit`).toBe(true);
+    });
+  });
+
+  it('transitions through every adjacent level pair in campaign order', () => {
+    LEVEL_ORDER.slice(0, -1).forEach((id, index) => {
+      const { bus, scene } = createScene({ levelId: id });
+      const completed = vi.fn();
+      bus.on('level:complete', completed);
+      Object.assign(scene.player, { x: scene.level.exit.x, y: scene.level.exit.y });
+
+      scene.updateExit();
+
+      const nextLevelId = LEVEL_ORDER[index + 1];
+      expect(scene.levelId).toBe(nextLevelId);
+      expect({ x: scene.player.x, y: scene.player.y }).toEqual(LEVELS[nextLevelId].spawn);
+      expect(completed).toHaveBeenCalledWith({ fromLevelId: id, nextLevelId });
     });
   });
 

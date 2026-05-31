@@ -50,7 +50,7 @@ export class PlayScene {
     const spawn = save?.checkpoint || this.level.spawn;
     this.player = new Player(spawn.x, spawn.y, this.bus, this.projectiles, this.particles);
     if (save) Object.assign(this.player, save.stats, save.collectibles);
-    this.enemies = this.level.enemies.map(enemy => new EnemyFSM(enemy.x, enemy.y, ENEMIES.mossling, this.bus, this.particles));
+    this.enemies = this.level.enemies.map(enemy => new EnemyFSM(enemy.x, enemy.y, ENEMIES[enemy.type], this.bus, this.particles));
     this.pickups.load(this.level.pickups);
     this.camera.setBounds(this.level.width, this.level.height);
     this.assets.loadBiome(this.biome);
