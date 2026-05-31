@@ -1,8 +1,9 @@
 import { LEVELS } from '../data/levels.js';
 import { overlaps } from '../physics/AABB.js';
 import { BIOMES } from '../data/biomes.js';
-import { ENEMIES } from '../data/enemies.js';
+import { BOSSES, ENEMIES } from '../data/enemies.js';
 import { Player } from '../gameplay/player/Player.js';
+import { BossFSM } from '../gameplay/enemies/BossFSM.js';
 import { EnemyFSM } from '../gameplay/enemies/EnemyFSM.js';
 import { ProjectilePool } from '../gameplay/combat/ProjectilePool.js';
 import { PickupPool } from '../gameplay/collectibles/PickupPool.js';
@@ -51,6 +52,13 @@ export class PlayScene {
     this.player = new Player(spawn.x, spawn.y, this.bus, this.projectiles, this.particles);
     if (save) Object.assign(this.player, save.stats, save.collectibles);
     this.enemies = this.level.enemies.map(enemy => new EnemyFSM(enemy.x, enemy.y, ENEMIES[enemy.type], this.bus, this.particles));
+    const boss = this.level.boss;
+    this.boss = boss ? new BossFSM(boss.x, boss.y, BOSSES[boss.config], this.bus, this.particles) : null;
+    this.bossDefeated = false;
+    if (this.boss) {
+      this.bus.emit('boss:spawned', { boss: this.boss });
+      this.bus.emit('hud:boss', { boss: this.boss, visible: true });
+    }
     this.pickups.load(this.level.pickups);
     this.camera.setBounds(this.level.width, this.level.height);
     this.assets.loadBiome(this.biome);
@@ -79,10 +87,13 @@ export class PlayScene {
       this.debug = !this.debug;
       this.bus.emit('debug:changed', { enabled: this.debug });
     }
-    this.player.update(this.input, this.tiles, this.enemies, dt);
+    const combatTargets = this.boss && !this.boss.dead ? [...this.enemies, this.boss] : this.enemies;
+    this.player.update(this.input, this.tiles, combatTargets, dt);
     this.enemies.forEach(enemy => enemy.update(this.player, this.tiles, dt));
     this.enemies = this.enemies.filter(enemy => !enemy.dead);
-    this.projectiles.update(dt, this.tiles, this.enemies, this.particles);
+    this.boss?.update(this.player, this.tiles, dt);
+    if (this.boss?.state === 'dead' && !this.bossDefeated) this.completeBoss();
+    this.projectiles.update(dt, this.tiles, combatTargets, this.particles);
     this.pickups.update(this.player, dt);
     this.particles.update(dt);
     updateCheckpoints(this.player, this.checkpoints, this.bus);
@@ -90,6 +101,14 @@ export class PlayScene {
     this.camera.follow(this.player, dt);
     this.collisionCount = this.tiles.length;
     this.updateExit();
+  }
+
+  completeBoss() {
+    this.bossDefeated = true;
+    this.particles.spawn(this.boss.x + this.boss.w / 2, this.boss.y + this.boss.h / 2, this.boss.config.hitColor, 42);
+    this.bus.emit('hud:boss', { boss: this.boss, visible: false });
+    this.bus.emit('feedback:boss-victory', { boss: this.boss, levelId: this.levelId });
+    this.bus.emit('save', { kind: 'Boss victory', levelId: this.levelId });
   }
 
   updateZones() {
@@ -124,6 +143,11 @@ export class PlayScene {
     const exit = this.level.exit;
     if (!exit || !overlaps(this.player, exit)) { this.exitEntered = false; return; }
     if (this.transitionedThisFrame || this.exitEntered) return;
+    if (this.boss && !this.bossDefeated) {
+      this.exitEntered = true;
+      this.bus.emit('boss:exit-blocked', { boss: this.boss, levelId: this.levelId });
+      return;
+    }
     this.transitionedThisFrame = true;
     this.exitEntered = true;
     const fromLevelId = this.levelId;
@@ -151,6 +175,7 @@ export class PlayScene {
       this.drawExit(world);
       this.pickups.draw(world);
       this.enemies.forEach(enemy => enemy.draw(world));
+      this.boss?.draw(world);
       this.projectiles.draw(world);
       this.player.draw(world);
       this.particles.draw(world);
@@ -172,12 +197,13 @@ export class PlayScene {
 
   drawExit(ctx) {
     const { x, y, w, h, nextLevelId } = this.level.exit;
-    ctx.save(); ctx.fillStyle = nextLevelId ? '#9cffc844' : '#ffe08a44'; ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = nextLevelId ? '#b9ffda' : '#ffe08a'; ctx.lineWidth = 4; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); ctx.restore();
+    const locked = this.boss && !this.bossDefeated;
+    ctx.save(); ctx.fillStyle = locked ? '#ff6e6844' : nextLevelId ? '#9cffc844' : '#ffe08a44'; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = locked ? '#ff6e68' : nextLevelId ? '#b9ffda' : '#ffe08a'; ctx.lineWidth = 4; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); ctx.restore();
   }
 
   drawDebug(ctx) {
     ctx.save(); ctx.fillStyle = '#07151add'; ctx.fillRect(1040, 620, 220, 76); ctx.fillStyle = '#b9ffda'; ctx.font = '15px monospace';
-    ctx.fillText(`entities: ${1 + this.enemies.length}`, 1055, 645); ctx.fillText(`particles: ${this.particles.activeCount}`, 1055, 665); ctx.fillText(`collision tiles: ${this.collisionCount}`, 1055, 685); ctx.restore();
+    ctx.fillText(`entities: ${1 + this.enemies.length + (this.boss && !this.boss.dead ? 1 : 0)}`, 1055, 645); ctx.fillText(`particles: ${this.particles.activeCount}`, 1055, 665); ctx.fillText(`collision tiles: ${this.collisionCount}`, 1055, 685); ctx.restore();
   }
 }

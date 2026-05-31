@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { LEVEL_ORDER, LEVELS } from '../data/levels.js';
-import { ENEMIES } from '../data/enemies.js';
+import { BOSSES, ENEMIES } from '../data/enemies.js';
 import { ITEMS } from '../data/items.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { EventBus } from './EventBus.js';
@@ -66,6 +66,7 @@ describe('level progression', () => {
       const completed = vi.fn();
       bus.on('level:complete', completed);
       Object.assign(scene.player, { x: scene.level.exit.x, y: scene.level.exit.y });
+      if (scene.boss) scene.bossDefeated = true;
 
       scene.updateExit();
 
@@ -96,6 +97,7 @@ describe('level progression', () => {
     const completed = vi.fn();
     bus.on('level:complete', completed);
     Object.assign(scene.player, { x: scene.level.exit.x, y: scene.level.exit.y });
+    scene.bossDefeated = true;
 
     scene.updateExit();
     scene.updateExit();
@@ -218,5 +220,75 @@ describe('interactive level zones', () => {
       discoveredSecrets: ['root-cache'],
       unlockedGates: ['verdant-gate'],
     }));
+  });
+});
+
+
+describe('boss arenas', () => {
+  it('spawns each configured boss at its arena position with collision dimensions', () => {
+    LEVEL_ORDER.filter(id => id.endsWith('-boss')).forEach(id => {
+      const { scene } = createScene({ levelId: id });
+      const configuredBoss = LEVELS[id].boss;
+
+      expect(scene.boss).toMatchObject({ x: configuredBoss.x, y: configuredBoss.y, state: 'idle', phase: 1 });
+      expect(scene.boss.config).toBe(BOSSES[configuredBoss.config]);
+      expect(scene.boss.w).toBeGreaterThan(0);
+      expect(scene.boss.h).toBeGreaterThan(0);
+    });
+  });
+
+  it('changes boss phases at the configured health thresholds', () => {
+    const { bus, scene } = createScene({ levelId: 'verdant-boss' });
+    const phaseChanged = vi.fn();
+    bus.on('boss:phase', phaseChanged);
+
+    scene.boss.hurt(scene.boss.maxHp * 0.35);
+    expect(scene.boss.phase).toBe(2);
+    scene.boss.hurt(scene.boss.maxHp * 0.34);
+
+    expect(scene.boss.phase).toBe(3);
+    expect(phaseChanged).toHaveBeenNthCalledWith(1, { boss: scene.boss, phase: 2 });
+    expect(phaseChanged).toHaveBeenNthCalledWith(2, { boss: scene.boss, phase: 3 });
+  });
+
+  it('blocks the arena exit until its boss is defeated', () => {
+    const { bus, scene } = createScene({ levelId: 'verdant-boss' });
+    const blocked = vi.fn();
+    const completed = vi.fn();
+    bus.on('boss:exit-blocked', blocked);
+    bus.on('level:complete', completed);
+    Object.assign(scene.player, { x: scene.level.exit.x, y: scene.level.exit.y });
+
+    scene.updateExit();
+
+    expect(scene.levelId).toBe('verdant-boss');
+    expect(blocked).toHaveBeenCalledOnce();
+    expect(completed).not.toHaveBeenCalled();
+  });
+
+  it('unlocks progression and emits HUD, feedback, and save events after boss victory', () => {
+    const { bus, scene } = createScene({ levelId: 'verdant-boss' });
+    const hud = vi.fn();
+    const feedback = vi.fn();
+    const save = vi.fn();
+    const completed = vi.fn();
+    bus.on('hud:boss', hud);
+    bus.on('feedback:boss-victory', feedback);
+    bus.on('save', save);
+    bus.on('level:complete', completed);
+    scene.boss.hurt(scene.boss.maxHp);
+
+    scene.update(0);
+    expect(scene.bossDefeated).toBe(true);
+    Object.assign(scene.player, { x: scene.level.exit.x, y: scene.level.exit.y });
+    scene.updateExit();
+
+    // Loading the next non-boss level resets arena-specific victory state.
+    expect(scene.bossDefeated).toBe(false);
+    expect(scene.levelId).toBe('grotto-01');
+    expect(hud).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+    expect(feedback).toHaveBeenCalledWith(expect.objectContaining({ levelId: 'verdant-boss' }));
+    expect(save).toHaveBeenCalledWith({ kind: 'Boss victory', levelId: 'verdant-boss' });
+    expect(completed).toHaveBeenCalledWith({ fromLevelId: 'verdant-boss', nextLevelId: 'grotto-01' });
   });
 });
