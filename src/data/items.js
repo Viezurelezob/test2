@@ -1,1 +1,16 @@
-export const ITEMS={coin:{name:'Sunshard Coin',category:'currency',rarity:'common',value:1,color:'#ffd76b'},crystal:{name:'Aether Crystal',category:'collectible',rarity:'uncommon',value:1,color:'#78f9df'},key:{name:'Rootforged Key',category:'quest',rarity:'rare',value:1,color:'#efb569'},'verdant-sigil':{name:'Verdant Sigil',category:'relic',rarity:'epic',value:1,effect:'unlock-verdant-gate',color:'#a0ff94'},'ember-tonic':{name:'Ember Tonic',category:'consumable',rarity:'uncommon',value:1,effect:{type:'damageBoost',multiplier:1.5,duration:8},color:'#ff8c61'}};
+export const ITEMS = {
+  coin: { name: 'Sunshard Coin', category: 'currency', rarity: 'common', value: 1, color: '#ffd76b' },
+  crystal: { name: 'Aether Crystal', category: 'collectible', rarity: 'uncommon', value: 1, color: '#78f9df' },
+  key: { name: 'Rootforged Key', category: 'quest', rarity: 'rare', value: 1, color: '#efb569' },
+  'verdant-sigil': { name: 'Verdant Sigil', category: 'relic', rarity: 'epic', value: 1, effect: 'unlock-verdant-gate', color: '#a0ff94' },
+  'canopy-emblem': { name: 'Canopy Emblem', category: 'quest', rarity: 'rare', value: 1, effect: 'unlock-canopy-gate', color: '#b8e36c' },
+  'resonance-prism': { name: 'Resonance Prism', category: 'quest', rarity: 'rare', value: 1, effect: 'unlock-resonance-door', color: '#78f9df' },
+  'echo-lens': { name: 'Echo Lens', category: 'quest', rarity: 'epic', value: 1, effect: 'unlock-maw-seal', color: '#a88cff' },
+  'rime-compass': { name: 'Rime Compass', category: 'quest', rarity: 'rare', value: 1, effect: 'unlock-glacier-gate', color: '#d8f5ff' },
+  'gale-crest': { name: 'Gale Crest', category: 'quest', rarity: 'epic', value: 1, effect: 'unlock-crown-door', color: '#88cfff' },
+  'furnace-brand': { name: 'Furnace Brand', category: 'quest', rarity: 'rare', value: 1, effect: 'unlock-forge-door', color: '#ff8c61' },
+  'cinder-key': { name: 'Cinder Key', category: 'quest', rarity: 'epic', value: 1, effect: 'unlock-core-seal', color: '#c95c45' },
+  'windglass-seal': { name: 'Windglass Seal', category: 'quest', rarity: 'rare', value: 1, effect: 'unlock-lift-gate', color: '#b7e8ff' },
+  'regent-insignia': { name: 'Regent Insignia', category: 'quest', rarity: 'epic', value: 1, effect: 'unlock-throne-door', color: '#d6c4ff' },
+  'ember-tonic': { name: 'Ember Tonic', category: 'consumable', rarity: 'uncommon', value: 1, effect: { type: 'damageBoost', multiplier: 1.5, duration: 8 }, color: '#ff8c61' },
+};
