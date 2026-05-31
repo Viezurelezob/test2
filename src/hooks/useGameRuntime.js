@@ -46,6 +46,7 @@ export function createGameRuntime(canvas, notify = {}) {
     bus.on('ui:pause', () => api.pauseGame()),
     bus.on('player:dead', () => scene?.respawn()),
     bus.on('checkpoint', ({ checkpoint }) => notify.toast?.(`Checkpoint activat: ${checkpoint.id}`)),
+    bus.on('level:complete', ({ nextLevelId }) => notify.toast?.(nextLevelId ? 'Nivel complet! Se încarcă următoarea zonă.' : 'Aventura este completă!')),
     bus.on('pickup', ({ item }) => { notify.inventory?.(getInventorySnapshot()); notify.toast?.(`${item.name} colectat`); }),
     bus.on('save', ({ kind }) => { notify.continueAvailability?.(storage.has()); notify.toast?.(`${kind} complet`); }),
     bus.on('debug:changed', ({ enabled }) => notify.debug?.(enabled)),
