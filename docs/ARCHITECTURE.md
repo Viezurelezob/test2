@@ -2,11 +2,13 @@
 
 ## Module și flux de date
 
-`src/main.js` compune servicii mici: input, event bus, scene manager, loop, audio, save și UI. `PlayScene` deține starea runtime a vertical slice-ului și orchestrează update-ul: player → AI → proiectile → pickups → particule → checkpoint → cameră. Rendering-ul citește starea după fiecare update fix. Datele de biome, niveluri, obiecte, inamici și skill-uri rămân declarative în `src/data/`.
+`src/main.jsx` montează aplicația React, iar `src/hooks/useGameRuntime.js` compune serviciile mici: input, event bus, scene manager, loop, audio și save. Componentele React din `src/components/` orchestrează exclusiv interfața: meniuri, setări, inventar și toast-uri. Ele expun acțiuni declarative către runtime și nu desenează jocul în DOM.
+
+`PlayScene` deține starea runtime a vertical slice-ului și orchestrează update-ul: player → AI → proiectile → pickups → particule → checkpoint → cameră. Scenele jocului rămân randate procedural pe suprafața Canvas. Rendering-ul citește starea după fiecare update fix. Datele de biome, niveluri, obiecte, inamici și skill-uri rămân declarative în `src/data/`.
 
 ## Game loop și scene
 
-`Game` folosește `requestAnimationFrame`, acumulator, update fix la 60 Hz și render separat cu alpha disponibil pentru interpolare. Delta acumulată este plafonată la 0.25 secunde pentru evitarea spiral-of-death. Când jocul este în pauză, simularea nu avansează și acumulatorul se resetează. `SceneManager` aplică tranzițiile înaintea următorului update sigur.
+`Game` folosește `requestAnimationFrame`, acumulator, update fix la 60 Hz și render separat cu alpha disponibil pentru interpolare. Delta acumulată este plafonată la 0.25 secunde pentru evitarea spiral-of-death. Când jocul este în pauză, simularea nu avansează și acumulatorul se resetează. `SceneManager` aplică tranzițiile înaintea următorului update sigur. La demontarea React, hook-ul oprește frame-ul programat, elimină listener-ele de input și subscription-urile event bus și închide scena activă, astfel încât montarea dublă din React Strict Mode să nu pornească runtime-uri concurente.
 
 ## ECS
 

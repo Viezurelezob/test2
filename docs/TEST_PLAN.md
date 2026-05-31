@@ -30,3 +30,16 @@
 - Telegraph-ul portocaliu al inamicului precede atacul.
 - Fundalul parallax și vremea nu reduc lizibilitatea platformelor.
 - HUD-ul oferă HP, energie, XP, nivel, aur, cristale și chei.
+
+## Verificări automate React
+
+- `npm test` verifică navigarea meniurilor, disponibilitatea Continue, volumele Music/SFX, debug toggle, snapshot-ul inventarului și expirarea toast-urilor.
+- `npm run build` verifică bundle-ul Vite de producție.
+
+## Smoke test manual după migrarea React
+
+- Pornește un New Game și confirmă randarea scenei pe canvas.
+- Creează o salvare, reîncarcă aplicația și folosește Continue.
+- Apasă `Esc`, verifică pauza, Manual Save și întoarcerea în Main Menu.
+- Deschide Inventory și confirmă valorile curente.
+- Lasă player-ul să moară și confirmă respawn-ul la checkpoint sau spawn.
