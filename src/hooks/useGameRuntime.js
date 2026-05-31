@@ -23,7 +23,7 @@ export function createGameRuntime(canvas, notify = {}) {
   const volume = new Volume();
   const music = new MusicManager(volume);
   const storage = new Storage();
-  const inventory = new Inventory();
+  let inventory = new Inventory();
   const skills = new SkillTree();
   const saveManager = new SaveManager(storage, bus);
   let scene;
@@ -35,10 +35,11 @@ export function createGameRuntime(canvas, notify = {}) {
       volume.set('music', save.settings.music);
       volume.set('sfx', save.settings.sfx);
     }
-    scene = new PlayScene({ canvas, input, bus, music, assets, saveData: save });
+    inventory = new Inventory(save?.inventory);
+    scene = new PlayScene({ canvas, input, bus, music, assets, inventory, saveData: save });
     scene.debug = Boolean(save?.settings?.debug);
     scenes.change(scene);
-    saveManager.bind(() => ({ player: scene.player, levelId: scene.levelId, checkpoint: scene.checkpoints.find(checkpoint => checkpoint.active) || scene.level.spawn, inventory, skills, settings: settings() }));
+    saveManager.bind(() => ({ player: scene.player, levelId: scene.levelId, checkpoint: scene.checkpoints.find(checkpoint => checkpoint.active) || scene.level.spawn, inventory, skills, zoneState: scene.serializeZoneState(), settings: settings() }));
     notify.settings?.(settings());
     notify.inventory?.(getInventorySnapshot());
   };
@@ -48,6 +49,9 @@ export function createGameRuntime(canvas, notify = {}) {
     bus.on('checkpoint', ({ checkpoint }) => notify.toast?.(`Checkpoint activat: ${checkpoint.id}`)),
     bus.on('level:complete', ({ nextLevelId }) => notify.toast?.(nextLevelId ? 'Nivel complet! Se încarcă următoarea zonă.' : 'Aventura este completă!')),
     bus.on('pickup', ({ item }) => { notify.inventory?.(getInventorySnapshot()); notify.toast?.(`${item.name} colectat`); }),
+    bus.on('ui:treasure', ({ treasure }) => notify.toast?.(`Comoară deschisă: ${treasure.item}`)),
+    bus.on('ui:secret', () => notify.toast?.('Secret descoperit!')),
+    bus.on('ui:gate', () => notify.toast?.('Poartă deblocată!')),
     bus.on('save', ({ kind }) => { notify.continueAvailability?.(storage.has()); notify.toast?.(`${kind} complet`); }),
     bus.on('debug:changed', ({ enabled }) => notify.debug?.(enabled)),
   ];

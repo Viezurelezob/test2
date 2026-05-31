@@ -81,3 +81,94 @@ describe('level progression', () => {
     expect(storage.save.mock.calls[0][0]).toMatchObject({ levelId: 'verdant-02', checkpoint: LEVELS['verdant-02'].spawn });
   });
 });
+
+describe('interactive level zones', () => {
+  it('applies hazard damage only once during invulnerability frames', () => {
+    const { scene } = createScene();
+    const hazard = scene.hazards.find(zone => !zone.respawn);
+    Object.assign(scene.player, { x: hazard.x, y: hazard.y, hp: 100 });
+
+    scene.updateZones();
+    scene.updateZones();
+
+    expect(scene.player.hp).toBe(100 - hazard.damage);
+    expect(scene.player.invulnerable).toBe(1);
+  });
+
+  it('respawns the player after entering a respawn hazard', () => {
+    const { scene } = createScene();
+    const pit = scene.hazards.find(zone => zone.respawn);
+    Object.assign(scene.player, { x: pit.x, y: pit.y });
+
+    scene.updateZones();
+
+    expect({ x: scene.player.x, y: scene.player.y }).toEqual(scene.level.spawn);
+    expect(scene.player.hp).toBe(scene.player.maxHp);
+  });
+
+  it('opens a treasure only once and emits one UI event', () => {
+    const { bus, scene } = createScene();
+    const opened = vi.fn();
+    bus.on('ui:treasure', opened);
+    const treasure = scene.treasures[0];
+    Object.assign(scene.player, { x: treasure.x, y: treasure.y });
+
+    scene.updateZones();
+    scene.updateZones();
+
+    expect(opened).toHaveBeenCalledOnce();
+    expect(scene.inventory.quest['verdant-sigil']).toBe(1);
+    expect(scene.serializeZoneState().openedTreasures).toContain('ruin-relic');
+  });
+
+  it('unlocks a gate only when the exact required quest item is present', () => {
+    const { bus, scene } = createScene();
+    const unlocked = vi.fn();
+    bus.on('ui:gate', unlocked);
+    const gate = scene.conditionalZones[0];
+    Object.assign(scene.player, { x: gate.x, y: gate.y });
+    scene.inventory.add({ name: 'some-other-relic', category: 'quest' });
+
+    scene.updateZones();
+    expect(gate.unlocked).toBe(false);
+
+    scene.inventory.add({ name: gate.requires, category: 'quest' });
+    scene.updateZones();
+    expect(gate.unlocked).toBe(true);
+    expect(unlocked).toHaveBeenCalledOnce();
+  });
+
+  it('restores opened treasures, discovered secrets, and unlocked gates from a save', () => {
+    const { scene } = createScene({
+      levelId: 'verdant-01',
+      openedTreasures: ['ruin-relic'],
+      discoveredSecrets: ['root-cache'],
+      unlockedGates: ['verdant-gate'],
+    });
+
+    expect(scene.treasures[0].opened).toBe(true);
+    expect(scene.secrets[0].discovered).toBe(true);
+    expect(scene.conditionalZones[0].unlocked).toBe(true);
+  });
+
+  it('persists interactive zone state through SaveManager payloads', () => {
+    const bus = new EventBus();
+    const storage = { save: vi.fn() };
+    const saveManager = new SaveManager(storage, bus);
+    const { scene } = createScene(null, bus);
+    const inventory = scene.inventory;
+    const skills = { unlocked: [] };
+    scene.zoneState.openedTreasures.add('ruin-relic');
+    scene.zoneState.discoveredSecrets.add('root-cache');
+    scene.zoneState.unlockedGates.add('verdant-gate');
+    saveManager.bind(() => ({ player: scene.player, levelId: scene.levelId, checkpoint: scene.level.spawn, inventory, skills, settings: {}, zoneState: scene.serializeZoneState() }));
+
+    saveManager.manualSave();
+
+    expect(storage.save).toHaveBeenCalledWith(expect.objectContaining({
+      openedTreasures: ['ruin-relic'],
+      discoveredSecrets: ['root-cache'],
+      unlockedGates: ['verdant-gate'],
+    }));
+  });
+});
