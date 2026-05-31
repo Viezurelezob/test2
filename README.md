@@ -1,16 +1,23 @@
 # Aetherbound
 
-**Aetherbound** este un vertical slice original de action-platformer 2D, construit fără framework-uri și fără asset-uri externe: Canvas desenează toate formele, fundalurile, personajele și efectele procedural.
+**Aetherbound** este un vertical slice original de action-platformer 2D. React orchestrează meniurile și controalele UI, iar Canvas desenează toate formele, fundalurile, personajele și efectele procedural, fără asset-uri externe.
 
 ## Rulare locală
 
-Modulele ES necesită un server static local. Din rădăcina proiectului:
+Instalează dependențele și pornește serverul Vite din rădăcina proiectului:
 
 ```bash
-python3 -m http.server 4173
+npm install
+npm run dev
 ```
 
-Apoi deschide `http://localhost:4173` într-un browser modern.
+Vite afișează URL-ul local care trebuie deschis într-un browser modern. Pentru verificarea bundle-ului de producție:
+
+```bash
+npm run build
+```
+
+Build-ul poate fi previzualizat local cu `npm run preview`.
 
 ## Controale
 
@@ -30,9 +37,10 @@ Primul nivel, **Overgrown Approach** din biomul **Verdant Hollows**, include par
 
 ## Structură
 
+- `src/components/`, `src/hooks/`: componentele React și integrarea declarativă cu runtime-ul jocului.
 - `src/core/`: game loop, scene, input, events și asset loading lazy.
 - `src/physics/`: integrare, constante și coliziuni AABB separate pe axe.
 - `src/gameplay/`: player, luptă, inamici, obiecte, inventar, skill tree și checkpoints.
 - `src/rendering/`: cameră, renderer, parallax, vreme și particule.
-- `src/save/`, `src/audio/`, `src/ui/`, `src/data/`: servicii și conținut declarativ.
+- `src/save/`, `src/audio/`, `src/ui/`, `src/data/`: servicii, HUD-ul procedural și conținut declarativ.
 - `docs/`: design, arhitectură, fizică, test plan și roadmap.
