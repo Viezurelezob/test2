@@ -1,1 +1,9 @@
-import{SAVE_VERSION}from'./schema.js';const KEY='aetherbound.save';export class Storage{has(){return Boolean(localStorage.getItem(KEY))}save(payload){localStorage.setItem(KEY,JSON.stringify(payload));return payload}load(){try{const raw=JSON.parse(localStorage.getItem(KEY));if(!raw||typeof raw!=='object'||!Number.isInteger(raw.version)||!raw.stats||typeof raw.levelId!=='string')return null;return this.migrate(raw)}catch{return null}}migrate(data){if(data.version>SAVE_VERSION)return null;let next={...data};while(next.version<SAVE_VERSION){next={...next,version:next.version+1}}return next}clear(){localStorage.removeItem(KEY)}}
+import { SAVE_VERSION } from './schema.js';
+const KEY = 'aetherbound.save';
+export class Storage {
+  has() { return Boolean(localStorage.getItem(KEY)); }
+  save(payload) { localStorage.setItem(KEY, JSON.stringify(payload)); return payload; }
+  load() { try { const raw = JSON.parse(localStorage.getItem(KEY)); if (!raw || typeof raw !== 'object' || !Number.isInteger(raw.version) || !raw.stats || typeof raw.levelId !== 'string') return null; return this.migrate(raw); } catch { return null; } }
+  migrate(data) { if (data.version > SAVE_VERSION) return null; let next = { ...data }; while (next.version < SAVE_VERSION) { if (next.version === 2) next = { ...next, skills: { unlocked: Array.isArray(next.skills) ? next.skills : [], points: 0 } }; next = { ...next, version: next.version + 1 }; } return next; }
+  clear() { localStorage.removeItem(KEY); }
+}

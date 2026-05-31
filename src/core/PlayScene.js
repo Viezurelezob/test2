@@ -20,8 +20,8 @@ import { drawHUD } from '../ui/HUD.js';
 const zoneSet = values => new Set(values || []);
 
 export class PlayScene {
-  constructor({ canvas, input, bus, music, assets, inventory = new Inventory(), saveData = null }) {
-    Object.assign(this, { canvas, input, bus, music, assets, inventory, debug: false, time: 0, collisionCount: 0 });
+  constructor({ canvas, input, bus, music, assets, inventory = new Inventory(), skills, saveData = null }) {
+    Object.assign(this, { canvas, input, bus, music, assets, inventory, skills, debug: false, time: 0, collisionCount: 0 });
     this.camera = new Camera(canvas.width, canvas.height);
     this.renderer = new Renderer(canvas.getContext('2d'), this.camera);
     this.particles = new ParticlePool();
@@ -49,8 +49,9 @@ export class PlayScene {
     this.secrets.forEach(zone => { zone.discovered = this.zoneState.discoveredSecrets.has(zone.id); });
     this.conditionalZones.forEach(zone => { zone.unlocked = this.zoneState.unlockedGates.has(zone.id); });
     const spawn = save?.checkpoint || this.level.spawn;
-    this.player = new Player(spawn.x, spawn.y, this.bus, this.projectiles, this.particles);
+    this.player = new Player(spawn.x, spawn.y, this.bus, this.projectiles, this.particles, this.skills);
     if (save) Object.assign(this.player, save.stats, save.collectibles);
+    this.player.applySkillEffects();
     this.enemies = this.level.enemies.map(enemy => new EnemyFSM(enemy.x, enemy.y, ENEMIES[enemy.type], this.bus, this.particles));
     const boss = this.level.boss;
     this.boss = boss ? new BossFSM(boss.x, boss.y, BOSSES[boss.config], this.bus, this.particles) : null;

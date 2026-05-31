@@ -24,24 +24,27 @@ export function createGameRuntime(canvas, notify = {}) {
   const music = new MusicManager(volume);
   const storage = new Storage();
   let inventory = new Inventory();
-  const skills = new SkillTree();
+  let skills = new SkillTree();
   const saveManager = new SaveManager(storage, bus);
   let scene;
 
   const settings = () => ({ music: volume.music, sfx: volume.sfx, debug: Boolean(scene?.debug) });
   const getInventorySnapshot = () => scene?.player ? { gold: scene.player.gold, crystals: scene.player.crystals, keys: scene.player.keys } : { ...EMPTY_INVENTORY };
+  const getSkillsSnapshot = () => skills.serialize();
   const launch = save => {
     if (save?.settings) {
       volume.set('music', save.settings.music);
       volume.set('sfx', save.settings.sfx);
     }
     inventory = new Inventory(save?.inventory);
-    scene = new PlayScene({ canvas, input, bus, music, assets, inventory, saveData: save });
+    skills = new SkillTree(save?.skills?.unlocked, save?.skills?.points);
+    scene = new PlayScene({ canvas, input, bus, music, assets, inventory, skills, saveData: save });
     scene.debug = Boolean(save?.settings?.debug);
     scenes.change(scene);
     saveManager.bind(() => ({ player: scene.player, levelId: scene.levelId, checkpoint: scene.checkpoints.find(checkpoint => checkpoint.active) || scene.level.spawn, inventory, skills, zoneState: scene.serializeZoneState(), settings: settings() }));
     notify.settings?.(settings());
     notify.inventory?.(getInventorySnapshot());
+    notify.skills?.(getSkillsSnapshot());
   };
   const subscriptions = [
     bus.on('ui:pause', () => api.pauseGame()),
@@ -66,6 +69,8 @@ export function createGameRuntime(canvas, notify = {}) {
     setSfxVolume(value) { volume.set('sfx', value); notify.settings?.(settings()); },
     setDebugEnabled(value) { if (scene) scene.debug = value; notify.debug?.(value); },
     getInventorySnapshot,
+    getSkillsSnapshot,
+    unlockSkill(id) { if (!skills.unlock(id)) return false; scene?.player.applySkillEffects(); notify.skills?.(getSkillsSnapshot()); return true; },
     destroy() { subscriptions.forEach(unsubscribe => unsubscribe()); saveManager.destroy(); music.destroy(); game.stop(); input.destroy(); scenes.destroy(); },
   };
   game.setPaused(true);
@@ -95,6 +100,7 @@ export function useGameRuntime(canvasRef) {
   const [sfx, setSfx] = useState(.7);
   const [debug, setDebug] = useState(false);
   const [inventory, setInventory] = useState(EMPTY_INVENTORY);
+  const [skills, setSkills] = useState({ unlocked: [], points: 0 });
   const { toast, showToast } = useTimedToast();
 
   useEffect(() => {
@@ -105,6 +111,7 @@ export function useGameRuntime(canvasRef) {
       settings: values => { setMusic(values.music); setSfx(values.sfx); setDebug(values.debug); },
       debug: setDebug,
       inventory: setInventory,
+      skills: setSkills,
       toast: showToast,
     });
     runtimeRef.current = runtime;
@@ -128,8 +135,10 @@ export function useGameRuntime(canvasRef) {
     if (action === 'menu') call('returnToMenu');
     if (action === 'settings' || action === 'credits') { returnPanelRef.current = activePanel || (paused ? 'pause' : 'menu'); setActivePanel(action); }
     if (action === 'inventory') { returnPanelRef.current = 'pause'; setInventory(runtimeRef.current?.api.getInventorySnapshot() || EMPTY_INVENTORY); setActivePanel('inventory'); }
+    if (action === 'skills') { returnPanelRef.current = 'pause'; setSkills(runtimeRef.current?.api.getSkillsSnapshot() || { unlocked: [], points: 0 }); setActivePanel('skills'); }
     if (action === 'back') setActivePanel(returnPanelRef.current);
   }, [activePanel, call, paused]);
 
-  return { activePanel, paused, canContinue, music, sfx, debug, inventory, toast, actions: { handleAction, setMusicVolume, setSfxVolume, setDebugEnabled } };
+  const unlockSkill = useCallback(id => call('unlockSkill', id), [call]);
+  return { activePanel, paused, canContinue, music, sfx, debug, inventory, skills, toast, actions: { handleAction, unlockSkill, setMusicVolume, setSfxVolume, setDebugEnabled } };
 }
