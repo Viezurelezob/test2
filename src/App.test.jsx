@@ -10,9 +10,10 @@ function UIHarness({ saved = false, initialPanel = 'menu' }) {
   const [music, setMusic] = useState(.5);
   const [sfx, setSfx] = useState(.7);
   const [debug, setDebug] = useState(false);
+  const [skills, setSkills] = useState({ unlocked: ['fleet-foot'], points: 2 });
   const actions = {
     handleAction(action) {
-      if (action === 'settings' || action === 'credits' || action === 'inventory') setActivePanel(action);
+      if (action === 'settings' || action === 'credits' || action === 'inventory' || action === 'skills') setActivePanel(action);
       if (action === 'back') setActivePanel('menu');
       if (action === 'pause') setActivePanel('pause');
       if (action === 'resume') setActivePanel(null);
@@ -21,8 +22,9 @@ function UIHarness({ saved = false, initialPanel = 'menu' }) {
     setMusicVolume: setMusic,
     setSfxVolume: setSfx,
     setDebugEnabled: setDebug,
+    unlockSkill(id) { setSkills(current => ({ points: current.points - 2, unlocked: [...current.unlocked, id] })); },
   };
-  return <GameUI canvasRef={null} runtime={{ activePanel, canContinue: saved, debug, inventory: { gold: 12, crystals: 3, keys: 1 }, music, sfx, toast: '', actions }} />;
+  return <GameUI canvasRef={null} runtime={{ activePanel, canContinue: saved, debug, inventory: { gold: 12, crystals: 3, keys: 1 }, skills, music, sfx, toast: '', actions }} />;
 }
 
 function ToastHarness() {
@@ -67,6 +69,22 @@ describe('React game UI', () => {
     expect(screen.getByText('Coins').nextSibling).toHaveTextContent('12');
     expect(screen.getByText('Aether crystals').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Rootforged keys').nextSibling).toHaveTextContent('1');
+  });
+
+
+  it('opens the skill tree from pause and displays costs, requirements, points, and unlock state', () => {
+    render(<UIHarness initialPanel="pause" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Skill Tree' }));
+
+    expect(screen.getByRole('heading', { name: 'SKILL TREE' })).toBeInTheDocument();
+    expect(screen.getByText('Available points:').parentElement).toHaveTextContent('Available points: 2');
+    expect(screen.getByRole('heading', { name: 'Fleet Foot' }).parentElement.parentElement).toHaveTextContent('Unlocked');
+    expect(screen.getByRole('heading', { name: 'Air Dancer' }).parentElement.parentElement).toHaveTextContent('Cost: 2 points');
+    expect(screen.getByRole('heading', { name: 'Air Dancer' }).parentElement.parentElement).toHaveTextContent('Requires: Fleet Foot');
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Unlock' })[0]);
+    expect(screen.getByRole('heading', { name: 'Air Dancer' }).parentElement.parentElement).toHaveTextContent('Unlocked');
+    expect(screen.getByText('Available points:').parentElement).toHaveTextContent('Available points: 0');
   });
 
   it('hides toast notifications after their timeout', () => {

@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { LEVEL_ORDER, LEVELS } from '../data/levels.js';
 import { BOSSES, ENEMIES } from '../data/enemies.js';
 import { ITEMS } from '../data/items.js';
+import { SkillTree } from '../gameplay/skills/SkillTree.js';
+import { applyPowerUp } from '../gameplay/player/PowerUps.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { EventBus } from './EventBus.js';
 import { PlayScene } from './PlayScene.js';
@@ -12,9 +14,10 @@ const input = { isDown: () => false, wasPressed: () => false };
 const assets = { loadBiome: vi.fn() };
 const music = { play: vi.fn() };
 
-function createScene(saveData = null, bus = new EventBus()) {
-  return { bus, scene: new PlayScene({ canvas, input, bus, music, assets, saveData }) };
+function createScene(saveData = null, bus = new EventBus(), skills = new SkillTree(saveData?.skills?.unlocked, saveData?.skills?.points)) {
+  return { bus, scene: new PlayScene({ canvas, input, bus, music, assets, skills, saveData }) };
 }
+
 
 describe('level progression', () => {
   it('declares exits that follow the campaign scene order', () => {
@@ -121,7 +124,7 @@ describe('level progression', () => {
     const saveManager = new SaveManager(storage, bus);
     const { scene } = createScene(null, bus);
     const inventory = { serialize: () => ({}), equipment: {} };
-    const skills = { unlocked: [] };
+    const skills = { unlocked: [], points: 0 };
     saveManager.bind(() => ({ player: scene.player, levelId: scene.levelId, checkpoint: scene.checkpoints.find(checkpoint => checkpoint.active) || scene.level.spawn, inventory, skills, settings: {} }));
     Object.assign(scene.player, { x: scene.level.exit.x, y: scene.level.exit.y });
 
@@ -129,6 +132,59 @@ describe('level progression', () => {
 
     expect(storage.save).toHaveBeenCalledOnce();
     expect(storage.save.mock.calls[0][0]).toMatchObject({ levelId: 'verdant-02', checkpoint: LEVELS['verdant-02'].spawn });
+  });
+});
+
+
+describe('skill progression', () => {
+  it('persists unlocked skills and available points in save payloads', () => {
+    const bus = new EventBus();
+    const storage = { save: vi.fn() };
+    const saveManager = new SaveManager(storage, bus);
+    const skills = new SkillTree(['fleet-foot'], 3);
+    const { scene } = createScene(null, bus, skills);
+    saveManager.bind(() => ({ player: scene.player, levelId: scene.levelId, checkpoint: scene.level.spawn, inventory: scene.inventory, skills, settings: {} }));
+
+    saveManager.manualSave();
+
+    expect(storage.save).toHaveBeenCalledWith(expect.objectContaining({ skills: { unlocked: ['fleet-foot'], points: 3 } }));
+  });
+
+  it('restores unlocked skills and available points from saved progress', () => {
+    const { scene } = createScene({ skills: { unlocked: ['rooted-heart'], points: 3 } });
+
+    expect(scene.skills.serialize()).toEqual({ unlocked: ['rooted-heart'], points: 3 });
+    expect(scene.player).toMatchObject({ maxHp: 120, hp: 120 });
+  });
+
+  it('restores and applies every unlocked skill effect to the player', () => {
+    const skills = new SkillTree(['fleet-foot', 'air-dancer', 'keen-edge', 'aether-quiver', 'rooted-heart', 'lasting-spark'], 4);
+    const { scene } = createScene(null, new EventBus(), skills);
+    const enemy = { x: scene.player.x + scene.player.w, y: scene.player.y + 8, w: 30, h: 42, state: 'idle', hurt: vi.fn() };
+    scene.player.melee([enemy]);
+    scene.player.projectiles.spawn(0, 0, 1, scene.player.projectileDamage);
+    applyPowerUp(scene.player, { effect: { type: 'damage', multiplier: 2, duration: 8 } });
+
+    expect(scene.player).toMatchObject({ sprintSpeed: 385, doubleJump: true, meleeDamage: 30, projectileDamage: 20, maxHp: 120, hp: 120, powerupDuration: 1.25 });
+    expect(enemy.hurt).toHaveBeenCalledWith(30, 1);
+    expect(scene.player.projectiles.items.find(projectile => projectile.active).damage).toBe(20);
+    expect(scene.player.powerups[0].remaining).toBe(10);
+  });
+
+  it('allows a second airborne jump only after Air Dancer is unlocked', () => {
+    const particles = { spawn: vi.fn() };
+    const pressJump = { isDown: () => false, wasPressed: action => action === 'jump' };
+    const withoutSkill = createScene().scene.player;
+    withoutSkill.particles = particles;
+    withoutSkill.jumps = 1;
+    withoutSkill.update(pressJump, [], [], 0);
+    expect(withoutSkill.jumps).toBe(1);
+
+    const withSkill = createScene(null, new EventBus(), new SkillTree(['fleet-foot', 'air-dancer'])).scene.player;
+    withSkill.particles = particles;
+    withSkill.jumps = 1;
+    withSkill.update(pressJump, [], [], 0);
+    expect(withSkill.jumps).toBe(2);
   });
 });
 
@@ -207,7 +263,7 @@ describe('interactive level zones', () => {
     const saveManager = new SaveManager(storage, bus);
     const { scene } = createScene(null, bus);
     const inventory = scene.inventory;
-    const skills = { unlocked: [] };
+    const skills = { unlocked: [], points: 0 };
     scene.zoneState.openedTreasures.add('ruin-relic');
     scene.zoneState.discoveredSecrets.add('root-cache');
     scene.zoneState.unlockedGates.add('verdant-gate');
